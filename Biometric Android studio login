@@ -1,0 +1,100 @@
+package com.example.escuelaapp
+
+import android.content.Intent
+import android.hardware.biometrics.BiometricPrompt
+import android.os.Bundle
+import android.view.PixelCopy.Request
+import android.widget.Button
+import android.widget.EditText
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.biometric.BiometricManager
+import androidx.core.content.ContextCompat
+import androidx.databinding.DataBindingUtil
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
+import com.example.escuelaapp.databinding.ActivityLoginBinding
+import org.json.JSONObject
+import java.util.concurrent.Executor
+
+
+class LoginActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityLoginBinding
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_login)
+
+        binding.loginButton.setOnClickListener {
+
+            val intent = Intent(this, MainActivity::class.java)
+            startActivity(intent)
+
+
+        }
+
+        binding.biometricalButton.setOnClickListener {
+            checkBiometricCapability()
+        }
+    }
+
+    private fun checkBiometricCapability() {
+        val biometricManager = BiometricManager.from(this)
+        when(biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)) {
+            BiometricManager.BIOMETRIC_SUCCESS -> {
+                showBiometricPrompt()
+            }
+            BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> {
+                showToast("No existe huella digital en el dispositivo")
+            }
+            BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> {
+                showToast("Hardware biometrico no disponible")
+            }
+            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> {
+                showToast("No hay huellas digitales registradas en el dispositivo")
+            }
+        }
+    }
+
+
+    private fun showBiometricPrompt() {
+        val executor = ContextCompat.getMainExecutor(this)
+        val biometricPrompt = androidx.biometric.BiometricPrompt(
+            this,
+            executor,
+            object : androidx.biometric.BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: androidx.biometric.BiometricPrompt.AuthenticationResult) {
+                    super.onAuthenticationSucceeded(result)
+                    showToast("Autenticación exitosa")
+
+                    val intent = Intent(this@LoginActivity, MainActivity::class.java)
+                    startActivity(intent)
+
+
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    super.onAuthenticationError(errorCode, errString)
+                    showToast("Error $errString")
+                }
+
+                override fun onAuthenticationFailed() {
+                    super.onAuthenticationFailed()
+                    showToast("Autenticación fallida")
+                }
+            }
+        )
+
+        val promptInfo = androidx.biometric.BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Por favor, ingresa tu huella digital")
+            .setSubtitle("Coloca el dedo en el sensor")
+            .setNegativeButtonText("Cancelar")
+            .build()
+
+        biometricPrompt.authenticate(promptInfo)
+    }
+
+    private fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+    }
+}
